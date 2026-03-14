@@ -1,0 +1,4143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MotoXpress Pro - Servicio Premium de Viajes</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.6.0/dist/easy.qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #0a1628;
+            --secondary: #1e3a5f;
+            --accent: #ff6b00;
+            --accent-blue: #0066cc;
+            --success: #25d366;
+            --danger: #ff3b30;
+            --gold: #ffd700;
+            --warning: #ffcc00;
+            --text: #ffffff;
+            --text-secondary: #8b9dc3;
+            --border: #2a4365;
+            --card-bg: #162238;
+            --overlay: rgba(10, 22, 40, 0.95);
+            --driver-primary: #1a5f3f;
+            --driver-accent: #00d084;
+        }
+
+        body {
+            font-family: 'SF Pro Display', 'Inter', -apple-system, sans-serif;
+            background: var(--primary);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        @media (min-width: 1024px) {
+            .main-wrapper {
+                flex-direction: row;
+                height: 100vh;
+                overflow: hidden;
+            }
+        }
+
+        .header {
+            background: rgba(10, 22, 40, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 12px 16px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .demand-indicator {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 0 0 12px 12px;
+            padding: 6px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .demand-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .demand-low { background: var(--success); }
+        .demand-medium { background: var(--warning); }
+        .demand-high { background: var(--danger); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3);
+        }
+
+        .brand-text h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-text span {
+            font-size: 11px;
+            color: var(--accent);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .menu-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .menu-btn:active { transform: scale(0.95); background: var(--secondary); }
+
+        .driver-access-btn {
+            background: linear-gradient(135deg, var(--driver-primary), var(--driver-accent));
+            border: none;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .driver-access-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 208, 132, 0.3);
+        }
+
+        .emergency-fab {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--danger), #cc0000);
+            border: 3px solid white;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999;
+            box-shadow: 0 4px 20px rgba(255, 59, 48, 0.5);
+            animation: emergency-pulse 2s infinite;
+            display: none;
+        }
+
+        .emergency-fab.active { display: flex; }
+
+        @keyframes emergency-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
+            50% { box-shadow: 0 0 0 20px rgba(255, 59, 48, 0); }
+        }
+
+        .main-container {
+            padding-top: 85px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 1024px) {
+            .main-container {
+                flex-direction: row;
+                height: calc(100vh - 85px);
+                overflow: hidden;
+                padding-top: 85px;
+            }
+        }
+
+        .map-section {
+            flex: 1;
+            position: relative;
+            height: 50vh;
+            min-height: 300px;
+            width: 100%;
+        }
+
+        @media (min-width: 1024px) {
+            .map-section {
+                height: 100%;
+                min-height: auto;
+            }
+        }
+
+        #map {
+            width: 100%;
+            height: 100% !important;
+            min-height: 300px;
+            z-index: 1;
+            background: #1a1a2e;
+        }
+
+        .map-controls {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .map-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+
+        .map-btn:hover { transform: scale(1.1); border-color: var(--accent-blue); }
+        .map-btn:active { transform: scale(0.95); }
+
+        .locate-btn {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            animation: pulse-blue 2s infinite;
+        }
+
+        @keyframes pulse-blue {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 102, 204, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(0, 102, 204, 0); }
+        }
+
+        .bottom-panel {
+            background: var(--card-bg);
+            border-radius: 24px 24px 0 0;
+            padding: 20px;
+            position: relative;
+            z-index: 100;
+            margin-top: -20px;
+            min-height: auto;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+        }
+
+        @media (min-width: 1024px) {
+            .bottom-panel {
+                width: 480px;
+                margin: 0;
+                border-radius: 0;
+                height: 100%;
+                overflow-y: auto;
+            }
+        }
+
+        .panel-handle {
+            width: 40px;
+            height: 4px;
+            background: var(--text-secondary);
+            rounded: 2px;
+            margin: 0 auto 20px;
+            opacity: 0.5;
+        }
+
+        @media (min-width: 1024px) {
+            .panel-handle { display: none; }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .feature-item {
+            background: var(--secondary);
+            border-radius: 12px;
+            padding: 12px 4px;
+            text-align: center;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .feature-item:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .feature-item.active {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            border-color: transparent;
+        }
+
+        .feature-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .feature-text {
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .feature-item.active .feature-text {
+            color: white;
+        }
+
+        .location-inputs {
+            background: var(--secondary);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .swap-btn {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 10;
+            transition: all 0.3s;
+            color: var(--text);
+        }
+
+        .swap-btn:hover {
+            border-color: var(--accent);
+            background: var(--accent);
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .input-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .input-row:first-child { padding-top: 0; }
+
+        .input-icon {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .icon-origin {
+            background: var(--accent-blue);
+            box-shadow: 0 0 12px var(--accent-blue);
+        }
+
+        .icon-dest {
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--accent);
+        }
+
+        .icon-stop {
+            background: var(--gold);
+            box-shadow: 0 0 12px var(--gold);
+        }
+
+        .input-field {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 500;
+            outline: none;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .input-field::placeholder { color: var(--text-secondary); }
+
+        .input-action {
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            transition: all 0.3s;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-action:hover {
+            color: var(--accent);
+            background: rgba(255,107,0,0.1);
+        }
+
+        .add-stop-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            background: transparent;
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .add-stop-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .add-stop-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .reservation-section {
+            background: linear-gradient(135deg, rgba(0,102,204,0.1), rgba(255,107,0,0.05));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .reservation-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .reservation-toggle h3 {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 28px;
+            background: var(--secondary);
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid var(--border);
+        }
+
+        .toggle-switch.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.active::after {
+            left: 26px;
+        }
+
+        .reservation-details {
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .reservation-details.active { display: block; }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .datetime-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .datetime-field {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .night-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(90deg, #1a1a2e, #16213e);
+            border: 1px solid #ffd700;
+            color: #ffd700;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .price-card {
+            background: linear-gradient(135deg, rgba(0,102,204,0.1), rgba(255,107,0,0.1));
+            border: 1px solid rgba(255,107,0,0.3);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .price-card.active {
+            display: block;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .price-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .price-main {
+            font-size: 42px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+
+        .price-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .badges {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .distance-badge {
+            background: var(--secondary);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .stops-badge {
+            background: rgba(255,215,0,0.15);
+            color: var(--gold);
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .fare-breakdown {
+            background: var(--secondary);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .breakdown-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .breakdown-toggle {
+            font-size: 11px;
+            color: var(--accent);
+            cursor: pointer;
+        }
+
+        .breakdown-content {
+            max-height: 400px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .breakdown-content.collapsed { max-height: 0; }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 15px;
+        }
+
+        .breakdown-item:last-child { border-bottom: none; }
+
+        .breakdown-item.total {
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 2px solid var(--accent);
+            border-bottom: none;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .breakdown-label {
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breakdown-value {
+            color: var(--text);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .breakdown-item.total .breakdown-label,
+        .breakdown-item.total .breakdown-value {
+            color: var(--accent);
+        }
+
+        .night-surcharge {
+            color: #ffd700;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .whatsapp-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 18px;
+            background: var(--success);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-weight: 700;
+            font-size: 17px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(37,211,102,0.3);
+        }
+
+        .whatsapp-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(37,211,102,0.4);
+        }
+
+        .share-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            background: var(--secondary);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            color: var(--text);
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .share-btn:hover {
+            border-color: var(--accent-blue);
+            background: rgba(0,102,204,0.1);
+        }
+
+        .ticket-btn {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            border: none;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .empty-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .empty-desc {
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 280px;
+            margin: 0 auto;
+        }
+
+        .info-section {
+            margin-bottom: 16px;
+        }
+
+        .trust-badge {
+            background: linear-gradient(135deg, rgba(0,102,204,0.15), rgba(255,107,0,0.1));
+            border: 1px solid rgba(255,107,0,0.2);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .trust-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .trust-content h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .trust-content p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .experience-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255,215,0,0.15);
+            color: var(--gold);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 6px;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .payment-methods {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .payment-badge {
+            flex: 1;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .payment-badge.cash {
+            background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.2));
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .payment-badge.transfer {
+            background: linear-gradient(135deg, rgba(37,211,102,0.1), rgba(37,211,102,0.2));
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .custom-marker {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 3px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .marker-origin { background: var(--accent-blue); }
+        .marker-dest { background: var(--accent); }
+        .marker-stop { background: var(--gold); color: #000; }
+        .marker-user {
+            background: var(--success);
+            border: 3px solid white;
+            animation: pulse-location 2s infinite;
+        }
+
+        .marker-driver {
+            background: var(--driver-accent);
+            border: 3px solid white;
+            animation: driver-pulse 1.5s infinite;
+        }
+
+        @keyframes pulse-location {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); transform: scale(1); }
+            50% { box-shadow: 0 0 0 15px rgba(37, 211, 102, 0); transform: scale(1.1); }
+        }
+
+        @keyframes driver-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 208, 132, 0.7); transform: scale(1); }
+            50% { box-shadow: 0 0 0 20px rgba(0, 208, 132, 0); transform: scale(1.1); }
+        }
+
+        .chat-fab {
+            position: fixed;
+            bottom: 180px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            border: 3px solid white;
+            color: white;
+            font-size: 24px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 998;
+            box-shadow: 0 4px 20px rgba(0, 102, 204, 0.4);
+            animation: chat-pulse 2s infinite;
+        }
+
+        .chat-fab.active { display: flex; }
+
+        .chat-fab.has-new::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 20px;
+            height: 20px;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        @keyframes chat-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .chat-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--overlay);
+            z-index: 2500;
+            display: none;
+            flex-direction: column;
+        }
+
+        .chat-overlay.active { display: flex; }
+
+        .chat-header {
+            background: var(--card-bg);
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .chat-info {
+            flex: 1;
+        }
+
+        .chat-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .chat-status {
+            font-size: 12px;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .chat-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: status-pulse 2s infinite;
+        }
+
+        @keyframes status-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chat-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--secondary);
+            border: none;
+            color: var(--text);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            animation: message-slide 0.3s ease;
+        }
+
+        @keyframes message-slide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-message.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.received {
+            align-self: flex-start;
+            background: var(--secondary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-time {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .chat-input-container {
+            background: var(--card-bg);
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .chat-send {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .chat-send:hover {
+            transform: scale(1.1);
+            background: var(--accent);
+        }
+
+        .driver-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary);
+            z-index: 3000;
+            flex-direction: column;
+        }
+
+        .driver-panel.active { display: flex; }
+
+        .driver-header {
+            background: linear-gradient(135deg, var(--driver-primary), #0f3d2a);
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .driver-profile {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .driver-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--driver-accent), #00a86b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            border: 3px solid white;
+        }
+
+        .driver-info h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .driver-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .driver-status.online {
+            background: rgba(0, 208, 132, 0.2);
+            color: var(--driver-accent);
+        }
+
+        .driver-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--driver-accent);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .driver-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .request-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            animation: slideUp 0.4s ease;
+        }
+
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .request-route {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .request-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--driver-accent);
+        }
+
+        .request-details {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .request-detail {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .request-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-accept {
+            padding: 12px;
+            background: var(--driver-accent);
+            border: none;
+            border-radius: 12px;
+            color: #000;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 208, 132, 0.4);
+        }
+
+        .btn-decline {
+            padding: 12px;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-decline:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .trip-controls {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .control-btn {
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn:last-child { margin-bottom: 0; }
+
+        .btn-arrived {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .btn-start {
+            background: var(--driver-accent);
+            color: #000;
+        }
+
+        .btn-complete {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            color: white;
+        }
+
+        .btn-cancel {
+            background: var(--secondary);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .driver-nav {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 16px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border);
+        }
+
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 4px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 12px;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(0, 208, 132, 0.1);
+            color: var(--driver-accent);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--overlay);
+            z-index: 4000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-overlay.active { display: flex; }
+
+        .login-box {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .login-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--driver-primary), var(--driver-accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 20px;
+        }
+
+        .login-box h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .login-box p {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .login-input {
+            width: 100%;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 16px;
+            margin-bottom: 12px;
+            outline: none;
+        }
+
+        .login-input:focus {
+            border-color: var(--driver-accent);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--driver-primary), var(--driver-accent));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 208, 132, 0.3);
+        }
+
+        .login-error {
+            color: var(--danger);
+            font-size: 13px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .login-error.active { display: block; }
+
+        .tracking-info {
+            background: linear-gradient(135deg, rgba(0,208,132,0.1), rgba(0,102,204,0.1));
+            border: 1px solid var(--driver-accent);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .tracking-info.active { display: block; }
+
+        .tracking-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tracking-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--driver-accent), var(--accent-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            animation: driver-pulse 2s infinite;
+        }
+
+        .tracking-details h4 {
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+
+        .tracking-details p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .tracking-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .tracking-stat {
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .tracking-stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--driver-accent);
+        }
+
+        .tracking-stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--overlay);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--secondary);
+            border: none;
+            color: var(--text);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .share-container, .rating-container { text-align: center; padding: 20px 0; }
+        .qr-container { background: white; padding: 20px; border-radius: 16px; display: inline-block; margin-bottom: 20px; }
+        .share-link { background: var(--secondary); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 13px; color: var(--text-secondary); word-break: break-all; margin-bottom: 16px; font-family: monospace; }
+        .share-timer { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--accent); font-size: 14px; font-weight: 600; margin-bottom: 20px; }
+        .share-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .share-action-btn { padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--secondary); color: var(--text); font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .share-action-btn:hover { border-color: var(--accent); }
+        .stars { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .star { font-size: 36px; cursor: pointer; transition: all 0.2s; opacity: 0.3; }
+        .star.active { opacity: 1; color: var(--gold); text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .star:hover { transform: scale(1.2); }
+        .comment-box { width: 100%; background: var(--secondary); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: var(--text); font-family: inherit; font-size: 14px; resize: none; margin-bottom: 16px; }
+        .submit-rating-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent-blue), var(--accent)); border: none; border-radius: 12px; color: white; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.3s; }
+        .submit-rating-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,102,204,0.4); }
+        .emergency-modal .modal-content { border-color: var(--danger); background: linear-gradient(135deg, rgba(255,59,48,0.1), var(--card-bg)); }
+        .emergency-icon { font-size: 64px; text-align: center; margin-bottom: 16px; animation: emergency-blink 1s infinite; }
+        @keyframes emergency-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .emergency-text { text-align: center; margin-bottom: 24px; }
+        .emergency-text h3 { color: var(--danger); font-size: 24px; margin-bottom: 8px; }
+        .emergency-text p { color: var(--text-secondary); font-size: 14px; }
+        .emergency-contact { background: var(--secondary); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+        .emergency-contact label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .emergency-contact input { width: 100%; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: var(--text); font-size: 16px; font-family: inherit; }
+        .emergency-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .emergency-btn { padding: 16px; border-radius: 12px; border: none; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.3s; }
+        .emergency-btn.primary { background: var(--danger); color: white; grid-column: span 2; }
+        .emergency-btn.secondary { background: var(--secondary); color: var(--text); border: 1px solid var(--border); }
+        .ticket-preview { background: white; color: #000; border-radius: 16px; padding: 24px; margin-bottom: 20px; font-family: 'Courier New', monospace; }
+        .ticket-header { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 16px; margin-bottom: 16px; }
+        .ticket-logo { font-size: 32px; margin-bottom: 8px; }
+        .ticket-title { font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+        .ticket-subtitle { font-size: 12px; color: #666; }
+        .ticket-details { margin-bottom: 16px; }
+        .ticket-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ccc; font-size: 13px; }
+        .ticket-row:last-child { border-bottom: none; }
+        .ticket-label { color: #666; }
+        .ticket-value { font-weight: 700; }
+        .ticket-total { background: #f5f5f5; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 16px; }
+        .ticket-total-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+        .ticket-total-value { font-size: 28px; font-weight: 800; color: var(--accent); }
+        .ticket-qr { text-align: center; }
+        .ticket-qr-label { font-size: 11px; color: #666; margin-top: 8px; }
+
+        .history-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .history-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .clear-history {
+            font-size: 11px;
+            color: var(--danger);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--secondary);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .history-item:hover {
+            background: var(--border);
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .history-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--card-bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .history-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-route {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 8px;
+            margin-top: 2px;
+        }
+
+        .history-price {
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .footer-info {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .footer-phone {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .footer-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .footer-schedule {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--secondary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 22, 40, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-overlay.active { display: flex; }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--card-bg);
+            color: var(--text);
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success { border-color: var(--success); background: rgba(37,211,102,0.15); }
+        .toast.error { border-color: var(--danger); background: rgba(255,59,48,0.15); }
+        .toast.warning { border-color: var(--warning); background: rgba(255,204,0,0.15); }
+
+        /* NUEVO: Botón flotante para ubicación actual del cliente */
+        .locate-user-fab {
+            position: fixed;
+            bottom: 100px;
+            left: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent));
+            border: 3px solid white;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 998;
+            box-shadow: 0 4px 20px rgba(0, 102, 204, 0.4);
+            transition: all 0.3s ease;
+            animation: pulse-blue 2s infinite;
+        }
+
+        .locate-user-fab:hover {
+            transform: scale(1.1);
+        }
+
+        .locate-user-fab:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 480px) {
+            .price-main { font-size: 36px; }
+            .brand-logo { width: 44px; height: 44px; }
+            .brand-text h1 { font-size: 18px; }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .driver-stats { grid-template-columns: repeat(3, 1fr); }
+            .stat-value { font-size: 18px; }
+            .locate-user-fab {
+                bottom: 90px;
+                left: 15px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="brand">
+            <div class="brand-logo">🏍️</div>
+            <div class="brand-text">
+                <h1>MotoXpress</h1>
+                <span>Servicio Premium</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="driver-access-btn" onclick="openDriverLogin()">👨‍✈️ Conductor</button>
+            <button class="menu-btn" onclick="clearRoute()" title="Nuevo viaje">✕</button>
+        </div>
+        <div class="demand-indicator" id="demand-indicator">
+            <span class="demand-dot demand-low" id="demand-dot"></span>
+            <span id="demand-text">Disponible ahora</span>
+        </div>
+    </header>
+
+    <!-- Botón de Emergencia -->
+    <button class="emergency-fab" id="emergency-fab" onclick="openEmergencyModal()" title="Botón de emergencia">
+        🆘
+    </button>
+
+    <!-- NUEVO: Botón flotante para ubicación actual -->
+    <button class="locate-user-fab" id="locate-user-fab" onclick="locateUserAndMark()" title="Mi ubicación actual">
+        📍
+    </button>
+
+    <!-- Chat FAB -->
+    <button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="Chat">
+        💬
+    </button>
+
+    <!-- Login Conductor -->
+    <div class="login-overlay" id="login-overlay">
+        <div class="login-box">
+            <div class="login-icon">👨‍✈️</div>
+            <h2>Acceso Conductores</h2>
+            <p>Ingresa tus credenciales para acceder al panel</p>
+            <input type="tel" class="login-input" id="login-phone" placeholder="Número de teléfono" maxlength="15">
+            <input type="password" class="login-input" id="login-password" placeholder="Contraseña">
+            <button class="login-btn" onclick="validateDriverLogin()">Ingresar al Panel</button>
+            <div class="login-error" id="login-error">Credenciales incorrectas. Solo personal autorizado.</div>
+            <button onclick="closeDriverLogin()" style="margin-top: 16px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 14px;">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Panel del Conductor -->
+    <div class="driver-panel" id="driver-panel">
+        <div class="driver-header">
+            <div class="driver-profile">
+                <div class="driver-avatar">👨‍✈️</div>
+                <div class="driver-info">
+                    <h2>Conductor MotoXpress</h2>
+                    <span class="driver-status online" id="driver-status">● En línea</span>
+                </div>
+            </div>
+            <div class="driver-stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-trips">0</div>
+                    <div class="stat-label">Viajes hoy</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-earnings">$0</div>
+                    <div class="stat-label">Ganancias</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-rating">5.0</div>
+                    <div class="stat-label">Calificación</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="driver-content" id="driver-content">
+            <div class="section-title">📥 Solicitudes de Viaje</div>
+            <div id="driver-requests">
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <div class="empty-icon">📱</div>
+                    <div class="empty-title">Esperando solicitudes...</div>
+                    <div class="empty-desc">Las solicitudes de clientes aparecerán aquí en tiempo real</div>
+                </div>
+            </div>
+
+            <div id="active-trip-section" style="display: none;">
+                <div class="section-title">🛵 Viaje en Curso</div>
+                <div class="trip-controls">
+                    <button class="control-btn btn-arrived" id="btn-arrived" onclick="driverArrived()">
+                        📍 He Llegado al Origen
+                    </button>
+                    <button class="control-btn btn-start" id="btn-start" onclick="startTrip()" style="display: none;">
+                        ▶️ Iniciar Viaje
+                    </button>
+                    <button class="control-btn btn-complete" id="btn-complete" onclick="completeTrip()" style="display: none;">
+                        ✓ Finalizar Viaje
+                    </button>
+                    <button class="control-btn btn-cancel" onclick="cancelTrip()">
+                        ✕ Cancelar
+                    </button>
+                </div>
+            </div>
+
+            <div class="section-title">💬 Chat con Cliente</div>
+            <div class="trip-controls" style="padding: 0; overflow: hidden;">
+                <div class="chat-messages" id="driver-chat-messages" style="max-height: 300px; background: var(--primary);">
+                    <div class="empty-state" style="padding: 20px;">
+                        <div class="empty-icon" style="font-size: 32px;">💬</div>
+                        <div class="empty-desc">No hay mensajes aún</div>
+                    </div>
+                </div>
+                <div class="chat-input-container" style="border-top: 1px solid var(--border);">
+                    <input type="text" class="chat-input" id="driver-chat-input" placeholder="Escribe un mensaje..." onkeypress="if(event.key==='Enter') sendDriverMessage()">
+                    <button class="chat-send" onclick="sendDriverMessage()">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="driver-nav">
+            <button class="nav-btn active" onclick="switchDriverTab('requests')">
+                <span class="nav-icon">📋</span>
+                <span>Solicitudes</span>
+            </button>
+            <button class="nav-btn" onclick="switchDriverTab('earnings')">
+                <span class="nav-icon">💰</span>
+                <span>Ganancias</span>
+            </button>
+            <button class="nav-btn" onclick="toggleDriverStatus()">
+                <span class="nav-icon" id="status-icon">🟢</span>
+                <span id="status-text">Activo</span>
+            </button>
+            <button class="nav-btn" onclick="logoutDriver()">
+                <span class="nav-icon">🚪</span>
+                <span>Salir</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Overlay Cliente -->
+    <div class="chat-overlay" id="chat-overlay">
+        <div class="chat-header">
+            <div class="chat-avatar">👨‍✈️</div>
+            <div class="chat-info">
+                <div class="chat-name">Conductor MotoXpress</div>
+                <div class="chat-status">En línea</div>
+            </div>
+            <button class="chat-close" onclick="toggleChat()">✕</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="chat-message received">
+                ¡Hola! Soy tu conductor. ¿En qué puedo ayudarte? 🏍️
+                <div class="chat-time">Ahora</div>
+            </div>
+        </div>
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" id="chat-input" placeholder="Escribe un mensaje..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="chat-send" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal -->
+    <div class="main-wrapper">
+        <div class="main-container">
+            <div class="map-section">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <button class="map-btn locate-btn" onclick="locateUser()" title="Centrar en mi ubicación">🎯</button>
+                    <button class="map-btn" onclick="toggleMapType()" title="Cambiar mapa">🗺️</button>
+                </div>
+                <div class="loading-overlay" id="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <div class="bottom-panel">
+                <div class="panel-handle"></div>
+
+                <!-- Features Grid - Solo 2 opciones -->
+                <div class="features-grid">
+                    <div class="feature-item" onclick="toggleFeature('reservation')" id="feature-reservation">
+                        <div class="feature-icon">📅</div>
+                        <div class="feature-text">Reservar</div>
+                    </div>
+                    <div class="feature-item" onclick="toggleFeature('rating')" id="feature-rating">
+                        <div class="feature-icon">⭐</div>
+                        <div class="feature-text">Calificar</div>
+                    </div>
+                </div>
+
+                <!-- Inputs de Ubicación -->
+                <div class="location-inputs">
+                    <div class="input-row" id="origin-row" onclick="setSelectionMode('origin')">
+                        <div class="input-icon icon-origin"></div>
+                        <input type="text" class="input-field" id="origin-input" placeholder="¿Dónde te recojo?" readonly>
+                        <span class="input-action" onclick="event.stopPropagation(); locateUserAndMark()">📍</span>
+                    </div>
+                    <div id="stops-container"></div>
+                    <div class="input-row" id="dest-row" onclick="setSelectionMode('dest')">
+                        <div class="input-icon icon-dest"></div>
+                        <input type="text" class="input-field" id="dest-input" placeholder="¿A dónde vas?" readonly>
+                        <span class="input-action" onclick="event.stopPropagation(); useClipboardLocation()">📋</span>
+                    </div>
+                    <button class="add-stop-btn" id="add-stop-btn" onclick="addStop()">
+                        <span>➕</span>
+                        <span>Agregar parada (máx. 3)</span>
+                    </button>
+                    <button class="swap-btn" onclick="swapLocations()" title="Intercambiar">⇅</button>
+                </div>
+
+                                <!-- Reserva Programada -->
+                <div class="reservation-section" id="reservation-section" style="display: none;">
+                    <div class="reservation-toggle">
+                        <h3>📅 Reserva Programada</h3>
+                        <div class="toggle-switch" id="reservation-toggle" onclick="toggleReservation()"></div>
+                    </div>
+                    <div class="reservation-details" id="reservation-details">
+                        <div class="datetime-inputs">
+                            <input type="date" class="datetime-field" id="reservation-date" min="">
+                            <input type="time" class="datetime-field" id="reservation-time">
+                        </div>
+                        <div class="night-badge" id="night-badge" style="display: none;">
+                            <span>🌙</span>
+                            <span>Horario nocturno (+30%)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seguimiento en tiempo real -->
+                <div class="tracking-info" id="tracking-info">
+                    <div class="tracking-header">
+                        <div class="tracking-avatar">🏍️</div>
+                        <div class="tracking-details">
+                            <h4>Tu conductor está en camino</h4>
+                            <p id="tracking-status">Llega en 3 minutos</p>
+                        </div>
+                    </div>
+                    <div class="tracking-stats">
+                        <div class="tracking-stat">
+                            <div class="tracking-stat-value" id="tracking-distance">0.5</div>
+                            <div class="tracking-stat-label">km restantes</div>
+                        </div>
+                        <div class="tracking-stat">
+                            <div class="tracking-stat-value" id="tracking-time">3</div>
+                            <div class="tracking-stat-label">minutos</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado Vacío -->
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-icon">🗺️</div>
+                    <div class="empty-title">¡Hola! 👋</div>
+                    <div class="empty-desc">Toca en el mapa para seleccionar tu ubicación y destino. Puedes agregar hasta 3 paradas intermedias.</div>
+                </div>
+
+                <!-- Tarjeta de Precio -->
+                <div class="price-card" id="price-card">
+                    <div class="price-header">
+                        <div>
+                            <div class="price-main" id="total-price">$0</div>
+                            <div class="price-label" id="price-label">Precio final</div>
+                        </div>
+                        <div class="badges">
+                            <div class="distance-badge" id="distance-badge">0.0 km</div>
+                            <div class="distance-badge stops-badge" id="stops-badge" style="display: none;">0 paradas</div>
+                        </div>
+                    </div>
+
+                    <div class="fare-breakdown">
+                        <div class="breakdown-title">
+                            Desglose de la tarifa
+                            <span class="breakdown-toggle" onclick="toggleBreakdown()">Ocultar</span>
+                        </div>
+                        <div class="breakdown-content" id="breakdown-content">
+                            <div class="breakdown-item">
+                                <span class="breakdown-label"><span>📝</span> Cuota de solicitud</span>
+                                <span class="breakdown-value" id="fare-booking">$132,00</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label"><span>🏁</span> Tarifa base</span>
+                                <span class="breakdown-value" id="fare-base">$484,92</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label"><span>⏱️</span> <span id="time-minutes">0</span> minutos</span>
+                                <span class="breakdown-value" id="fare-time">$0,00</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span class="breakdown-label"><span>📍</span> <span id="distance-km">0.0</span> km</span>
+                                <span class="breakdown-value" id="fare-distance">$0,00</span>
+                            </div>
+                            <div class="breakdown-item" id="stops-item" style="display: none;">
+                                <span class="breakdown-label"><span>🛑</span> Paradas (<span id="stops-count">0</span>)</span>
+                                <span class="breakdown-value" id="fare-stops">$0,00</span>
+                            </div>
+                            <div class="breakdown-item night-surcharge" id="night-item" style="display: none;">
+                                <span class="breakdown-label"><span>🌙</span> Recargo nocturno (21-06h)</span>
+                                <span class="breakdown-value" id="fare-night">+30%</span>
+                            </div>
+                            <div class="breakdown-item total">
+                                <span class="breakdown-label">TOTAL</span>
+                                <span class="breakdown-value" id="fare-total">$0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <a href="#" class="whatsapp-btn" id="whatsapp-btn" target="_blank">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                            </svg>
+                            <span>Solicitar viaje por WhatsApp</span>
+                        </a>
+                        <button class="share-btn" onclick="openShareModal()">
+                            <span>📤</span>
+                            <span>Compartir ubicación</span>
+                        </button>
+                        <button class="share-btn ticket-btn" onclick="generateTicket()">
+                            <span>🎫</span>
+                            <span>Generar Ticket</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Section (reubicada al final) -->
+                <div class="info-section" id="info-section">
+                    <div class="trust-badge">
+                        <div class="trust-icon">⭐</div>
+                        <div class="trust-content">
+                            <h3>Experiencia Garantizada</h3>
+                            <p>2 años brindando el mejor servicio de transporte en moto. Puntualidad, seguridad y confianza.</p>
+                            <div class="experience-badge">
+                                <span>🏆</span>
+                                <span>2 Años de Experiencia</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="payment-methods">
+                        <div class="payment-badge cash">
+                            <span>💵</span>
+                            <span>Efectivo</span>
+                        </div>
+                        <div class="payment-badge transfer">
+                            <span>📲</span>
+                            <span>Transferencia</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historial -->
+                <div class="history-section" id="history-section" style="display: none;">
+                    <div class="history-title">
+                        Viajes recientes
+                        <span class="clear-history" onclick="clearHistory()">Borrar</span>
+                    </div>
+                    <div id="history-list"></div>
+                </div>
+
+                <!-- Footer -->
+                <div class="footer-info">
+                    <div class="footer-phone">3885 979711</div>
+                    <div class="footer-text">Perico • Monterrico • Zona de influencia</div>
+                    <div class="footer-schedule">
+                        <span>🕐</span>
+                        <span>Disponible 24/7</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Modal de Compartir Ubicación -->
+    <div class="modal-overlay" id="share-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📤 Compartir Ubicación</h2>
+                <button class="modal-close" onclick="closeModal('share-modal')">✕</button>
+            </div>
+            <div class="share-container">
+                <div class="qr-container" id="share-qr"></div>
+                <div class="share-timer">
+                    <span>⏱️</span>
+                    <span id="share-timer-text">Válido por 2:00:00</span>
+                </div>
+                <div class="share-link" id="share-link"></div>
+                <div class="share-actions">
+                    <button class="share-action-btn" onclick="copyShareLink()">
+                        <span>📋</span>
+                        <span>Copiar</span>
+                    </button>
+                    <button class="share-action-btn" onclick="shareViaWhatsApp()">
+                        <span>💬</span>
+                        <span>WhatsApp</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Calificación -->
+    <div class="modal-overlay" id="rating-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⭐ Calificar Viaje</h2>
+                <button class="modal-close" onclick="closeModal('rating-modal')">✕</button>
+            </div>
+            <div class="rating-container">
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">¿Cómo fue tu experiencia?</p>
+                <div class="stars" id="rating-stars">
+                    <span class="star" onclick="setRating(1)">⭐</span>
+                    <span class="star" onclick="setRating(2)">⭐</span>
+                    <span class="star" onclick="setRating(3)">⭐</span>
+                    <span class="star" onclick="setRating(4)">⭐</span>
+                    <span class="star" onclick="setRating(5)">⭐</span>
+                </div>
+                <textarea class="comment-box" id="rating-comment" rows="4" placeholder="Cuéntanos más sobre tu viaje (opcional)..."></textarea>
+                <button class="submit-rating-btn" onclick="submitRating()">Enviar Calificación</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Emergencia -->
+    <div class="modal-overlay emergency-modal" id="emergency-modal">
+        <div class="modal-content">
+            <div class="emergency-icon">🆘</div>
+            <div class="emergency-text">
+                <h3>¿Emergencia?</h3>
+                <p>Se enviará tu ubicación actual y un mensaje de alerta a tu contacto de confianza.</p>
+            </div>
+            <div class="emergency-contact">
+                <label>Contacto de emergencia</label>
+                <input type="tel" id="emergency-contact" placeholder="Ej: 3885123456" maxlength="10">
+            </div>
+            <div class="emergency-actions">
+                <button class="emergency-btn primary" onclick="triggerEmergency()">ENVIAR ALERTA</button>
+                <button class="emergency-btn secondary" onclick="closeModal('emergency-modal')">Cancelar</button>
+                <button class="emergency-btn secondary" onclick="callEmergency()">Llamar 911</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ticket -->
+    <div class="modal-overlay" id="ticket-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🎫 Tu Ticket</h2>
+                <button class="modal-close" onclick="closeModal('ticket-modal')">✕</button>
+            </div>
+            <div class="ticket-preview" id="ticket-content">
+                <div class="ticket-header">
+                    <div class="ticket-logo">🏍️</div>
+                    <div class="ticket-title">MOTOXPRESS</div>
+                    <div class="ticket-subtitle">Comprobante de Viaje</div>
+                </div>
+                <div class="ticket-details">
+                    <div class="ticket-row">
+                        <span class="ticket-label">Fecha:</span>
+                        <span class="ticket-value" id="ticket-date"></span>
+                    </div>
+                    <div class="ticket-row">
+                        <span class="ticket-label">Origen:</span>
+                        <span class="ticket-value" id="ticket-origin"></span>
+                    </div>
+                    <div class="ticket-row">
+                        <span class="ticket-label">Destino:</span>
+                        <span class="ticket-value" id="ticket-dest"></span>
+                    </div>
+                    <div class="ticket-row">
+                        <span class="ticket-label">Distancia:</span>
+                        <span class="ticket-value" id="ticket-distance"></span>
+                    </div>
+                    <div class="ticket-row">
+                        <span class="ticket-label">Tiempo:</span>
+                        <span class="ticket-value" id="ticket-time"></span>
+                    </div>
+                </div>
+                <div class="ticket-total">
+                    <div class="ticket-total-label">TOTAL</div>
+                    <div class="ticket-total-value" id="ticket-price"></div>
+                </div>
+                <div class="ticket-qr" id="ticket-qr"></div>
+                <div class="ticket-qr-label">Escanea para verificar</div>
+            </div>
+            <button class="submit-rating-btn" onclick="downloadTicket()" style="margin-top: 16px;">
+                📥 Descargar Ticket
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURACIÓN Y ESTADO GLOBAL
+        // ==========================================
+        
+        const CONFIG = {
+            fares: {
+                base: 484.92,
+                minimum: 1212.96,
+                perMinute: 46.15,
+                perKm: 336.09,
+                bookingFee: 132.00,
+                perStop: 300.00,
+                nightSurcharge: 0.30
+            },
+            nightHours: { start: 21, end: 6 },
+            maxStops: 3,
+            shareTokenDuration: 2 * 60 * 60 * 1000,
+            pericoCenter: [-24.3833, -65.1000],
+            phone: "543885979711",
+            driverPassword: "Dark2020"
+        };
+
+        const STATE = {
+            map: null,
+            markers: { origin: null, dest: null, stops: [], user: null, driver: null },
+            routeLine: null,
+            selectionMode: 'origin',
+            currentStopIndex: -1,
+            stops: [],
+            reservation: { active: false, date: null, time: null, isNight: false },
+            trip: { active: false, startTime: null, shareToken: null, shareExpiry: null, rating: 0, comment: '', driverAssigned: false, driverLocation: null, status: 'pending' },
+            emergencyContact: localStorage.getItem('mx_emergency_contact') || '',
+            tripHistory: JSON.parse(localStorage.getItem('mx_history') || '[]'),
+            ratings: JSON.parse(localStorage.getItem('mx_ratings') || '[]'),
+            mapType: 'dark',
+            driver: { loggedIn: false, online: false, currentTrip: null, stats: { trips: 0, earnings: 0, rating: 5.0 } },
+            chat: { messages: [], unread: 0 }
+        };
+
+        // ==========================================
+        // INICIALIZACIÓN MEJORADA DEL MAPA
+        // ==========================================
+        
+        function init() {
+            // Esperar a que el DOM esté completamente cargado
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeApp);
+            } else {
+                initializeApp();
+            }
+        }
+
+        function initializeApp() {
+            try {
+                initMap();
+                initReservationDate();
+                updateDemandIndicator();
+                loadHistory();
+                loadEmergencyContact();
+                
+                // Forzar actualización del tamaño del mapa después de un momento
+                setTimeout(() => {
+                    if (STATE.map) {
+                        STATE.map.invalidateSize();
+                    }
+                }, 100);
+                
+                setInterval(updateDemandIndicator, 60000);
+                setInterval(updateShareTimer, 1000);
+                setInterval(simulateDriverMovement, 5000);
+                setTimeout(() => showToast('🎉 2 años brindando el mejor servicio', 'success'), 1000);
+            } catch (error) {
+                console.error('Error inicializando app:', error);
+                showToast('Error al cargar el mapa. Recarga la página.', 'error');
+            }
+        }
+
+        function initMap() {
+            const mapContainer = document.getElementById('map');
+            
+            // Verificar que el contenedor tenga dimensiones
+            if (!mapContainer) {
+                console.error('Contenedor del mapa no encontrado');
+                return;
+            }
+            
+            // Asegurar que el contenedor tenga altura
+            mapContainer.style.height = '100%';
+            mapContainer.style.minHeight = '300px';
+            
+            STATE.map = L.map('map', { 
+                zoomControl: false, 
+                attributionControl: false 
+            }).setView(CONFIG.pericoCenter, 14);
+            
+            updateMapTiles();
+            
+            // Agregar control de zoom manualmente
+            L.control.zoom({ position: 'bottomright' }).addTo(STATE.map);
+            
+            // Evento de click en el mapa
+            STATE.map.on('click', handleMapClick);
+            
+            // Forzar renderizado
+            setTimeout(() => {
+                STATE.map.invalidateSize();
+            }, 0);
+        }
+
+        function updateMapTiles() {
+            const tiles = STATE.mapType === 'dark' 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            
+            // Remover capas anteriores si existen
+            STATE.map.eachLayer((layer) => {
+                if (layer instanceof L.TileLayer) {
+                    STATE.map.removeLayer(layer);
+                }
+            });
+            
+            L.tileLayer(tiles, { 
+                maxZoom: 19, 
+                attribution: STATE.mapType === 'light' ? '© OpenStreetMap' : '' 
+            }).addTo(STATE.map);
+        }
+
+        function toggleMapType() {
+            STATE.mapType = STATE.mapType === 'dark' ? 'light' : 'dark';
+            updateMapTiles();
+            showToast(STATE.mapType === 'dark' ? 'Modo oscuro 🌙' : 'Modo claro ☀️', 'success');
+        }
+
+        // ==========================================
+        // NUEVA FUNCIÓN: Ubicación y marcado en el mapa
+        // ==========================================
+        
+        function locateUserAndMark() {
+            if (!navigator.geolocation) {
+                showToast('❌ Tu navegador no soporta geolocalización', 'error');
+                return;
+            }
+            
+            document.getElementById('loading').classList.add('active');
+            
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            };
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    document.getElementById('loading').classList.remove('active');
+                    
+                    const latlng = L.latLng(position.coords.latitude, position.coords.longitude);
+                    
+                    // Centrar mapa y mostrar ubicación
+                    STATE.map.setView(latlng, 16);
+                    showUserLocation(latlng);
+                    
+                    // Determinar qué marcador colocar
+                    if (!STATE.markers.origin) {
+                        // Si no hay origen, marcar como origen
+                        setOrigin(latlng);
+                        setSelectionMode('stop', 0);
+                        showToast('📍 Ubicación actual marcada como ORIGEN', 'success');
+                    } else if (!STATE.markers.dest && STATE.stops.length === 0) {
+                        // Si hay origen pero no destino ni paradas, preguntar
+                        showLocationChoiceModal(latlng);
+                    } else if (STATE.stops.length < CONFIG.maxStops && !STATE.markers.dest) {
+                        // Si hay espacio para paradas, agregar parada
+                        addStopMarker(latlng, STATE.stops.length);
+                        setSelectionMode('stop', STATE.stops.length);
+                        showToast(`🛑 Parada ${STATE.stops.length} agregada en tu ubicación`, 'success');
+                    } else if (!STATE.markers.dest) {
+                        // Si no hay destino, marcar como destino
+                        setDestination(latlng);
+                        calculateRoute();
+                        showToast('🏁 Destino marcado. Ruta calculada.', 'success');
+                    } else {
+                        // Todo completo, solo centrar
+                        showToast('📍 Ubicación actual encontrada', 'success');
+                    }
+                },
+                (error) => {
+                    document.getElementById('loading').classList.remove('active');
+                    handleLocationError(error);
+                },
+                options
+            );
+        }
+
+        function showLocationChoiceModal(latlng) {
+            // Crear modal temporal para elegir
+            const choice = confirm('¿Quieres usar esta ubicación como DESTINO?\n\n• OK = Destino\n• Cancelar = Agregar como parada');
+            
+            if (choice) {
+                setDestination(latlng);
+                calculateRoute();
+                showToast('🏁 Destino marcado', 'success');
+            } else {
+                if (STATE.stops.length < CONFIG.maxStops) {
+                    addStopMarker(latlng, STATE.stops.length);
+                    showToast('🛑 Parada agregada', 'success');
+                }
+            }
+        }
+
+        function showUserLocation(latlng) {
+            // Remover marcador anterior si existe
+            if (STATE.markers.user) {
+                STATE.map.removeLayer(STATE.markers.user);
+            }
+            
+            const icon = L.divIcon({ 
+                className: 'custom-marker marker-user', 
+                html: '👤', 
+                iconSize: [44, 44], 
+                iconAnchor: [22, 22] 
+            });
+            
+            STATE.markers.user = L.marker(latlng, {icon}).addTo(STATE.map);
+            
+            // Agregar círculo de precisión
+            const circle = L.circle(latlng, {
+                color: '#25d366',
+                fillColor: '#25d366',
+                fillOpacity: 0.1,
+                radius: 100
+            }).addTo(STATE.map);
+            
+            // Remover círculo después de 3 segundos
+            setTimeout(() => {
+                STATE.map.removeLayer(circle);
+            }, 3000);
+        }
+
+        // ==========================================
+        // DEMANDA EN TIEMPO REAL
+        // ==========================================
+        
+        function updateDemandIndicator() {
+            const hour = new Date().getHours();
+            const day = new Date().getDay();
+            let demand = 'low', text = 'Disponible ahora', dotClass = 'demand-low';
+            
+            const isPeakHour = (hour >= 7 && hour <= 9) || (hour >= 12 && hour <= 14) || (hour >= 18 && hour <= 20);
+            const isWeekendHigh = (day === 0 || day === 6) && (hour >= 20 || hour <= 2);
+            
+            if (isWeekendHigh) {
+                demand = 'high'; text = '🔴 Alta demanda - Espera 15 min'; dotClass = 'demand-high';
+            } else if (isPeakHour) {
+                demand = 'medium'; text = '🟡 Demanda media - Espera 5-10 min'; dotClass = 'demand-medium';
+            }
+            
+            document.getElementById('demand-dot').className = `demand-dot ${dotClass}`;
+            document.getElementById('demand-text').textContent = text;
+        }
+
+        // ==========================================
+        // MANEJO DE UBICACIONES Y PARADAS
+        // ==========================================
+        
+        function handleMapClick(e) {
+            const latlng = e.latlng;
+            
+            if (STATE.selectionMode === 'origin' || (!STATE.markers.origin && !STATE.markers.dest)) {
+                setOrigin(latlng);
+                if (STATE.stops.length < CONFIG.maxStops) {
+                    STATE.selectionMode = 'stop'; 
+                    STATE.currentStopIndex = STATE.stops.length;
+                    showToast(`📍 Origen fijado. Toca para agregar parada ${STATE.stops.length + 1} o destino`);
+                } else {
+                    STATE.selectionMode = 'dest';
+                    showToast('📍 Origen fijado. Toca para seleccionar destino');
+                }
+            } else if (STATE.selectionMode === 'stop' && STATE.stops.length < CONFIG.maxStops) {
+                addStopMarker(latlng, STATE.currentStopIndex);
+                if (STATE.stops.length < CONFIG.maxStops) {
+                    STATE.currentStopIndex = STATE.stops.length;
+                    showToast(`🛑 Parada agregada. Toca para parada ${STATE.stops.length + 1} o destino`);
+                } else {
+                    STATE.selectionMode = 'dest';
+                    showToast('🛑 Máximo de paradas alcanzado. Selecciona destino');
+                }
+            } else if (STATE.selectionMode === 'dest' || !STATE.markers.dest) {
+                setDestination(latlng); 
+                calculateRoute(); 
+                showToast('✅ Ruta completa calculada');
+            }
+        }
+
+        function setOrigin(latlng) {
+            if (STATE.markers.origin) STATE.map.removeLayer(STATE.markers.origin);
+            
+            const icon = L.divIcon({ 
+                className: 'custom-marker marker-origin', 
+                html: 'A', 
+                iconSize: [44, 44], 
+                iconAnchor: [22, 22] 
+            });
+            
+            STATE.markers.origin = L.marker(latlng, {icon}).addTo(STATE.map);
+            updateAddress('origin-input', latlng, 'Origen');
+            STATE.map.panTo(latlng);
+        }
+
+        function addStopMarker(latlng, index) {
+            if (STATE.markers.stops[index]) {
+                STATE.map.removeLayer(STATE.markers.stops[index]);
+                STATE.markers.stops[index] = null;
+            }
+            
+            const letter = String.fromCharCode(66 + index);
+            const icon = L.divIcon({ 
+                className: 'custom-marker marker-stop', 
+                html: letter, 
+                iconSize: [44, 44], 
+                iconAnchor: [22, 22] 
+            });
+            
+            STATE.markers.stops[index] = L.marker(latlng, {icon}).addTo(STATE.map);
+            STATE.stops[index] = latlng;
+            addStopInput(index, latlng);
+        }
+
+        function addStopInput(index, latlng) {
+            const container = document.getElementById('stops-container');
+            let existing = document.getElementById(`stop-row-${index}`);
+            
+            if (!existing) {
+                const div = document.createElement('div');
+                div.className = 'input-row'; 
+                div.id = `stop-row-${index}`;
+                div.innerHTML = `
+                    <div class="input-icon icon-stop"></div>
+                    <input type="text" class="input-field" id="stop-input-${index}" placeholder="Parada ${index + 1}" readonly>
+                    <span class="input-action" onclick="event.stopPropagation(); removeStop(${index})">✕</span>
+                `;
+                div.onclick = () => setSelectionMode('stop', index);
+                container.appendChild(div);
+            }
+            
+            updateAddress(`stop-input-${index}`, latlng, `Parada ${index + 1}`);
+            updateStopsButton();
+        }
+
+        function setDestination(latlng) {
+            if (STATE.markers.dest) STATE.map.removeLayer(STATE.markers.dest);
+            
+            const letter = String.fromCharCode(66 + STATE.stops.length);
+            const icon = L.divIcon({ 
+                className: 'custom-marker marker-dest', 
+                html: letter, 
+                iconSize: [44, 44], 
+                iconAnchor: [22, 22] 
+            });
+            
+            STATE.markers.dest = L.marker(latlng, {icon}).addTo(STATE.map);
+            updateAddress('dest-input', latlng, 'Destino');
+            STATE.map.panTo(latlng);
+        }
+
+        function setSelectionMode(mode, stopIndex = -1) {
+            STATE.selectionMode = mode; 
+            STATE.currentStopIndex = stopIndex;
+            
+            // Resetear estilos
+            document.getElementById('origin-row').style.background = '';
+            document.getElementById('dest-row').style.background = '';
+            document.querySelectorAll('[id^="stop-row-"]').forEach(el => el.style.background = '');
+            
+            // Aplicar estilo activo
+            if (mode === 'origin') {
+                document.getElementById('origin-row').style.background = 'rgba(0,102,204,0.15)';
+                showToast('📍 Toca en el mapa tu ubicación actual');
+            } else if (mode === 'stop') {
+                const row = document.getElementById(`stop-row-${stopIndex}`);
+                if (row) row.style.background = 'rgba(255,215,0,0.15)';
+                showToast(`🛑 Toca en el mapa para mover parada ${stopIndex + 1}`);
+            } else if (mode === 'dest') {
+                document.getElementById('dest-row').style.background = 'rgba(255,107,0,0.15)';
+                showToast('🎯 Toca en el mapa tu destino final');
+            }
+        }
+
+        function addStop() {
+            if (STATE.stops.length >= CONFIG.maxStops) { 
+                showToast('Máximo 3 paradas permitidas', 'error'); 
+                return; 
+            }
+            
+            STATE.selectionMode = 'stop'; 
+            STATE.currentStopIndex = STATE.stops.length;
+            setSelectionMode('stop', STATE.currentStopIndex);
+        }
+
+        function removeStop(index) {
+            event.stopPropagation();
+            
+            if (STATE.markers.stops[index]) { 
+                STATE.map.removeLayer(STATE.markers.stops[index]); 
+                STATE.markers.stops[index] = null; 
+            }
+            
+            STATE.stops.splice(index, 1); 
+            STATE.markers.stops.splice(index, 1);
+            
+            rebuildStopsUI();
+            
+            if (STATE.markers.dest) calculateRoute();
+        }
+
+        function rebuildStopsUI() {
+            const container = document.getElementById('stops-container');
+            container.innerHTML = '';
+            
+            STATE.stops.forEach((latlng, i) => {
+                if (latlng) {
+                    if (STATE.markers.stops[i]) {
+                        STATE.map.removeLayer(STATE.markers.stops[i]);
+                    }
+                    
+                    const letter = String.fromCharCode(66 + i);
+                    const icon = L.divIcon({ 
+                        className: 'custom-marker marker-stop', 
+                        html: letter, 
+                        iconSize: [44, 44], 
+                        iconAnchor: [22, 22] 
+                    });
+                    
+                    STATE.markers.stops[i] = L.marker(latlng, {icon}).addTo(STATE.map);
+                    
+                    const div = document.createElement('div');
+                    div.className = 'input-row'; 
+                    div.id = `stop-row-${i}`;
+                    div.innerHTML = `
+                        <div class="input-icon icon-stop"></div>
+                        <input type="text" class="input-field" id="stop-input-${i}" placeholder="Parada ${i + 1}" readonly>
+                        <span class="input-action" onclick="event.stopPropagation(); removeStop(${i})">✕</span>
+                    `;
+                    div.onclick = () => setSelectionMode('stop', i);
+                    container.appendChild(div);
+                    
+                    updateAddress(`stop-input-${i}`, latlng, `Parada ${i + 1}`);
+                }
+            });
+            
+            // Actualizar letra del destino
+            if (STATE.markers.dest) {
+                const destLatLng = STATE.markers.dest.getLatLng();
+                STATE.map.removeLayer(STATE.markers.dest);
+                const destLetter = String.fromCharCode(66 + STATE.stops.length);
+                const destIcon = L.divIcon({ 
+                    className: 'custom-marker marker-dest', 
+                    html: destLetter, 
+                    iconSize: [44, 44], 
+                    iconAnchor: [22, 22] 
+                });
+                STATE.markers.dest = L.marker(destLatLng, {icon: destIcon}).addTo(STATE.map);
+            }
+            
+            updateStopsButton();
+        }
+
+        function updateStopsButton() {
+            const btn = document.getElementById('add-stop-btn');
+            btn.disabled = STATE.stops.length >= CONFIG.maxStops;
+            btn.innerHTML = STATE.stops.length >= CONFIG.maxStops 
+                ? '<span>✓</span><span>Máximo de paradas alcanzado</span>'
+                : `<span>➕</span><span>Agregar parada (${STATE.stops.length}/3)</span>`;
+        }
+
+        function swapLocations() {
+            if (!STATE.markers.origin || !STATE.markers.dest) { 
+                showToast('Selecciona origen y destino primero', 'error'); 
+                return; 
+            }
+            
+            const tempOrigin = STATE.markers.origin.getLatLng();
+            const tempDest = STATE.markers.dest.getLatLng();
+            
+            setOrigin(tempDest); 
+            setDestination(tempOrigin);
+            
+            if (STATE.stops.length > 0) {
+                STATE.stops.reverse();
+                rebuildStopsUI();
+            }
+            
+            calculateRoute(); 
+            showToast('🔄 Ruta invertida', 'success');
+        }
+
+        function updateAddress(inputId, latlng, type) {
+            const input = document.getElementById(inputId);
+            input.value = `${type}: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+            
+            // Intentar obtener dirección real
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&zoom=18&addressdetails=1`)
+                .then(r => r.json())
+                .then(data => { 
+                    if (data.display_name) { 
+                        const parts = data.display_name.split(','); 
+                        input.value = parts.slice(0, 2).join(','); 
+                    } 
+                })
+                .catch(() => {});
+        }
+
+        function locateUser() {
+            if (!navigator.geolocation) { 
+                showToast('❌ Tu navegador no soporta geolocalización', 'error'); 
+                return; 
+            }
+            
+            document.getElementById('loading').classList.add('active');
+            
+            navigator.geolocation.getCurrentPosition(
+                (success) => {
+                    document.getElementById('loading').classList.remove('active');
+                    const latlng = L.latLng(success.coords.latitude, success.coords.longitude);
+                    STATE.map.setView(latlng, 16); 
+                    showUserLocation(latlng);
+                    showToast('📍 Ubicación actualizada', 'success');
+                },
+                (error) => { 
+                    document.getElementById('loading').classList.remove('active'); 
+                    handleLocationError(error); 
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+
+        function handleLocationError(error) {
+            let message = 'No se pudo obtener tu ubicación';
+            
+            switch(error.code) {
+                case error.PERMISSION_DENIED: 
+                    message = '⚠️ Activa los permisos de ubicación en tu navegador'; 
+                    break;
+                case error.POSITION_UNAVAILABLE: 
+                    message = '⚠️ Información de ubicación no disponible'; 
+                    break;
+                case error.TIMEOUT: 
+                    message = '⏱️ Tiempo agotado. Intenta de nuevo'; 
+                    break;
+            }
+            
+            showToast(message, 'error');
+        }
+
+        function useClipboardLocation() {
+            navigator.clipboard.readText().then(text => {
+                const coords = text.match(/(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
+                
+                if (coords) {
+                    const latlng = L.latLng(parseFloat(coords[1]), parseFloat(coords[2]));
+                    
+                    if (!STATE.markers.origin) { 
+                        setOrigin(latlng); 
+                        setSelectionMode('stop', 0); 
+                    } else { 
+                        setDestination(latlng); 
+                        calculateRoute(); 
+                    }
+                    
+                    showToast('📋 Ubicación pegada', 'success');
+                } else { 
+                    showToast('No se encontraron coordenadas válidas', 'error'); 
+                }
+            }).catch(() => { 
+                showToast('No se pudo acceder al portapapeles', 'error'); 
+            });
+        }
+
+        // ==========================================
+        // CÁLCULO DE RUTAS Y TARIFAS
+        // ==========================================
+        
+        function calculateRoute() {
+            if (!STATE.markers.origin || !STATE.markers.dest) return;
+            
+            const points = [
+                STATE.markers.origin.getLatLng(), 
+                ...STATE.stops.filter(s => s), 
+                STATE.markers.dest.getLatLng()
+            ];
+            
+            if (STATE.routeLine) STATE.map.removeLayer(STATE.routeLine);
+            
+            STATE.routeLine = L.polyline(points, { 
+                color: '#ff6b00', 
+                weight: 5, 
+                opacity: 0.9, 
+                lineCap: 'round', 
+                lineJoin: 'round' 
+            }).addTo(STATE.map);
+            
+            STATE.map.fitBounds(STATE.routeLine.getBounds(), { padding: [50, 50] });
+            
+            let totalDistance = 0;
+            for (let i = 0; i < points.length - 1; i++) {
+                totalDistance += calculateDistance(points[i], points[i + 1]);
+            }
+            
+            const estimatedTime = estimateTime(totalDistance);
+            const fareDetails = calculateFare(totalDistance, estimatedTime);
+            
+            showFareDetails(fareDetails, totalDistance, estimatedTime);
+            saveToHistory(points, totalDistance, fareDetails.total);
+            
+            STATE.trip.active = true; 
+            STATE.trip.startTime = new Date();
+            document.getElementById('emergency-fab').classList.add('active');
+            
+            if (STATE.trip.driverAssigned) {
+                document.getElementById('chat-fab').classList.add('active');
+                document.getElementById('tracking-info').classList.add('active');
+            }
+        }
+
+        function calculateDistance(latlng1, latlng2) {
+            const R = 6371;
+            const dLat = (latlng2.lat - latlng1.lat) * Math.PI / 180;
+            const dLon = (latlng2.lng - latlng1.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) ** 2 + Math.cos(latlng1.lat * Math.PI / 180) * Math.cos(latlng2.lat * Math.PI / 180) * Math.sin(dLon/2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function estimateTime(distanceKm) {
+            return Math.ceil((distanceKm / 35) * 60);
+        }
+
+        function calculateFare(distanceKm, timeMinutes) {
+            const fares = CONFIG.fares;
+            let bookingFee = fares.bookingFee;
+            let baseFare = fares.base;
+            let timeFare = timeMinutes * fares.perMinute;
+            let distanceFare = distanceKm * fares.perKm;
+            let stopsFare = STATE.stops.length * fares.perStop;
+            let subtotal = bookingFee + baseFare + timeFare + distanceFare + stopsFare;
+            let nightSurcharge = 0;
+            let isNight = false;
+            let checkDate = new Date();
+            
+            if (STATE.reservation.active && STATE.reservation.date && STATE.reservation.time) {
+                const [hours, minutes] = STATE.reservation.time.split(':');
+                checkDate = new Date(STATE.reservation.date); 
+                checkDate.setHours(parseInt(hours), parseInt(minutes));
+            }
+            
+            const hour = checkDate.getHours();
+            isNight = hour >= CONFIG.nightHours.start || hour < CONFIG.nightHours.end;
+            
+            if (isNight) { 
+                nightSurcharge = subtotal * fares.nightSurcharge; 
+                subtotal += nightSurcharge; 
+            }
+            
+            if (subtotal < fares.minimum) subtotal = fares.minimum;
+            
+            return { 
+                bookingFee, 
+                baseFare, 
+                timeFare, 
+                distanceFare, 
+                stopsFare, 
+                stopsCount: STATE.stops.length, 
+                nightSurcharge, 
+                isNight, 
+                timeMinutes, 
+                distanceKm, 
+                subtotal, 
+                total: subtotal 
+            };
+        }
+
+        function showFareDetails(fare, distance, time) {
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('price-card').classList.add('active');
+            animatePrice(fare.total);
+            
+            document.getElementById('distance-badge').textContent = `${distance.toFixed(1)} km • ${time} min`;
+            
+            const stopsBadge = document.getElementById('stops-badge');
+            if (fare.stopsCount > 0) { 
+                stopsBadge.style.display = 'block'; 
+                stopsBadge.textContent = `${fare.stopsCount} parada${fare.stopsCount > 1 ? 's' : ''}`; 
+            } else {
+                stopsBadge.style.display = 'none';
+            }
+            
+            document.getElementById('fare-booking').textContent = `$${fare.bookingFee.toFixed(2).replace('.', ',')}`;
+            document.getElementById('fare-base').textContent = `$${fare.baseFare.toFixed(2).replace('.', ',')}`;
+            document.getElementById('time-minutes').textContent = fare.timeMinutes;
+            document.getElementById('fare-time').textContent = `$${fare.timeFare.toFixed(2).replace('.', ',')}`;
+            document.getElementById('distance-km').textContent = distance.toFixed(1);
+            document.getElementById('fare-distance').textContent = `$${fare.distanceFare.toFixed(2).replace('.', ',')}`;
+            document.getElementById('fare-total').textContent = `$${fare.total.toFixed(2).replace('.', ',')}`;
+            
+            const stopsItem = document.getElementById('stops-item');
+            if (fare.stopsCount > 0) { 
+                stopsItem.style.display = 'flex'; 
+                document.getElementById('stops-count').textContent = fare.stopsCount; 
+                document.getElementById('fare-stops').textContent = `$${fare.stopsFare.toFixed(2).replace('.', ',')}`; 
+            } else {
+                stopsItem.style.display = 'none';
+            }
+            
+            const nightItem = document.getElementById('night-item');
+            if (fare.isNight) { 
+                nightItem.style.display = 'flex'; 
+                document.getElementById('fare-night').textContent = `+$${fare.nightSurcharge.toFixed(2).replace('.', ',')} (30%)`; 
+                document.getElementById('price-label').textContent = 'Precio final (incluye nocturno)'; 
+            } else { 
+                nightItem.style.display = 'none'; 
+                document.getElementById('price-label').textContent = 'Precio final'; 
+            }
+            
+            updateWhatsAppLink(fare, distance, time);
+            document.getElementById('history-section').style.display = 'block';
+        }
+
+        function animatePrice(targetPrice) {
+            const element = document.getElementById('total-price');
+            const startTime = performance.now();
+            
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / 800, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                const currentPrice = targetPrice * easeProgress;
+                element.textContent = `$${Math.round(currentPrice).toLocaleString()}`;
+                
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            
+            requestAnimationFrame(update);
+        }
+
+        function toggleBreakdown() {
+            const content = document.getElementById('breakdown-content');
+            const toggle = document.querySelector('.breakdown-toggle');
+            content.classList.toggle('collapsed');
+            toggle.textContent = content.classList.contains('collapsed') ? 'Mostrar' : 'Ocultar';
+        }
+
+        function updateWhatsAppLink(fare, distance, time) {
+            const originText = document.getElementById('origin-input').value;
+            const destText = document.getElementById('dest-input').value;
+            const originCoords = STATE.markers.origin.getLatLng();
+            const destCoords = STATE.markers.dest.getLatLng();
+            const originLink = `https://www.google.com/maps/search/?api=1&query=${originCoords.lat},${originCoords.lng}`;
+            const destLink = `https://www.google.com/maps/search/?api=1&query=${destCoords.lat},${destCoords.lng}`;
+            
+            let stopsText = '';
+            if (STATE.stops.length > 0) {
+                stopsText = '\n🛑 *Paradas:*';
+                STATE.stops.forEach((stop, i) => { 
+                    if (stop) stopsText += `\n${String.fromCharCode(66 + i)}. https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}`; 
+                });
+            }
+            
+            let reservationText = '';
+            if (STATE.reservation.active) reservationText = `\n📅 *Reserva:* ${STATE.reservation.date} a las ${STATE.reservation.time}`;
+            
+            let message = `*🚀 Nueva solicitud - MotoXpress*${reservationText}\n\n*💎 Servicio Premium - 2 años de experiencia*\n\n📍 *Origen:* ${originText}\n🔗 ${originLink}${stopsText}\n\n🏁 *Destino:* ${destText}\n🔗 ${destLink}\n\n📏 *Distancia:* ${distance.toFixed(1)} km\n⏱️ *Tiempo:* ${time} minutos\n💳 *Pago:* Efectivo o Transferencia`;
+            
+            if (fare.isNight) message += `\n🌙 *Recargo nocturno:* +30%`;
+            
+            message += `\n\n*💰 Tarifa:*\n• Subtotal: $${fare.subtotal.toFixed(2)}\n• *TOTAL: $${fare.total.toFixed(2)}*\n\n¿Confirmas disponibilidad? 🏍️💨`;
+            
+            document.getElementById('whatsapp-btn').href = `https://wa.me/${CONFIG.phone}?text=${encodeURIComponent(message)}`;
+        }
+
+        // ==========================================
+        // SISTEMA DE RESERVAS
+        // ==========================================
+        
+        function initReservationDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('reservation-date').min = today;
+            document.getElementById('reservation-date').value = today;
+        }
+
+        function toggleFeature(feature) {
+            const element = document.getElementById(`feature-${feature}`);
+            element.classList.toggle('active');
+            
+            if (feature === 'reservation') {
+                const section = document.getElementById('reservation-section');
+                section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            } else if (feature === 'rating') {
+                openRatingModal();
+            }
+            
+            if (feature !== 'reservation') setTimeout(() => element.classList.remove('active'), 300);
+        }
+
+        function toggleReservation() {
+            const toggle = document.getElementById('reservation-toggle');
+            const details = document.getElementById('reservation-details');
+            STATE.reservation.active = !STATE.reservation.active;
+            
+            if (STATE.reservation.active) {
+                toggle.classList.add('active'); 
+                details.classList.add('active');
+                showToast('📅 Modo reserva activado', 'success'); 
+                checkNightTime();
+            } else {
+                toggle.classList.remove('active'); 
+                details.classList.remove('active');
+                document.getElementById('night-badge').style.display = 'none';
+                showToast('Modo inmediato activado');
+            }
+            
+            if (STATE.markers.origin && STATE.markers.dest) calculateRoute();
+        }
+
+        function checkNightTime() {
+            const timeInput = document.getElementById('reservation-time');
+            const dateInput = document.getElementById('reservation-date');
+            
+            if (!timeInput.value || !dateInput.value) return;
+            
+            const [hours] = timeInput.value.split(':').map(Number);
+            const isNight = hours >= CONFIG.nightHours.start || hours < CONFIG.nightHours.end;
+            document.getElementById('night-badge').style.display = isNight ? 'flex' : 'none';
+            
+            if (STATE.reservation.active && STATE.markers.origin && STATE.markers.dest) calculateRoute();
+        }
+
+        setTimeout(() => {
+            document.getElementById('reservation-time')?.addEventListener('change', checkNightTime);
+            document.getElementById('reservation-date')?.addEventListener('change', checkNightTime);
+        }, 100);
+
+        // ==========================================
+        // SISTEMA DE COMPARTIR UBICACIÓN
+        // ==========================================
+        
+        function openShareModal() {
+            if (!STATE.trip.active) { 
+                showToast('No hay viaje activo para compartir', 'error'); 
+                return; 
+            }
+            
+            generateShareToken();
+            document.getElementById('share-modal').classList.add('active');
+            updateShareTimer();
+            
+            const shareUrl = `${window.location.origin}${window.location.pathname}?track=${STATE.trip.shareToken}`;
+            document.getElementById('share-link').textContent = shareUrl;
+            
+            const qrContainer = document.getElementById('share-qr');
+            qrContainer.innerHTML = '';
+            
+            try {
+                new QRCode(qrContainer, { 
+                    text: shareUrl, 
+                    width: 200, 
+                    height: 200, 
+                    colorDark: '#0a1628', 
+                    colorLight: '#ffffff', 
+                    correctLevel: QRCode.CorrectLevel.H 
+                });
+            } catch (e) { 
+                qrContainer.innerHTML = '<div style="padding: 20px; color: #666;">QR generado</div>'; 
+            }
+        }
+
+        function generateShareToken() {
+            if (!STATE.trip.shareToken) {
+                STATE.trip.shareToken = 'mx_' + Math.random().toString(36).substring(2, 15);
+                STATE.trip.shareExpiry = Date.now() + CONFIG.shareTokenDuration;
+                
+                localStorage.setItem('mx_active_share', JSON.stringify({ 
+                    token: STATE.trip.shareToken, 
+                    expiry: STATE.trip.shareExpiry, 
+                    origin: STATE.markers.origin.getLatLng(), 
+                    dest: STATE.markers.dest.getLatLng(), 
+                    stops: STATE.stops, 
+                    startTime: STATE.trip.startTime 
+                }));
+            }
+        }
+
+        function updateShareTimer() {
+            if (!STATE.trip.shareExpiry) return;
+            
+            const remaining = STATE.trip.shareExpiry - Date.now();
+            
+            if (remaining <= 0) { 
+                document.getElementById('share-timer-text').textContent = 'Expirado'; 
+                invalidateShareToken(); 
+                return; 
+            }
+            
+            const hours = Math.floor(remaining / 3600000);
+            const minutes = Math.floor((remaining % 3600000) / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            
+            document.getElementById('share-timer-text').textContent = `Válido por ${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function invalidateShareToken() { 
+            STATE.trip.shareToken = null; 
+            STATE.trip.shareExpiry = null; 
+            localStorage.removeItem('mx_active_share'); 
+        }
+
+        function copyShareLink() {
+            const link = document.getElementById('share-link').textContent;
+            
+            navigator.clipboard.writeText(link)
+                .then(() => showToast('📋 Link copiado al portapapeles', 'success'))
+                .catch(() => showToast('No se pudo copiar', 'error'));
+        }
+
+        function shareViaWhatsApp() {
+            const link = document.getElementById('share-link').textContent;
+            const message = `📍 *Sigue mi viaje MotoXpress en tiempo real*\n\n${link}\n\n_Válido por 2 horas_`;
+            
+            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+        }
+
+        // ==========================================
+        // SISTEMA DE EMERGENCIA
+        // ==========================================
+        
+        function openEmergencyModal() { 
+            document.getElementById('emergency-modal').classList.add('active'); 
+            document.getElementById('emergency-contact').value = STATE.emergencyContact; 
+        }
+        
+        function loadEmergencyContact() { 
+            const saved = localStorage.getItem('mx_emergency_contact'); 
+            if (saved) STATE.emergencyContact = saved; 
+        }
+
+        function triggerEmergency() {
+            const contact = document.getElementById('emergency-contact').value.trim();
+            
+            if (!contact || contact.length < 10) { 
+                showToast('Ingresa un número de contacto válido', 'error'); 
+                return; 
+            }
+            
+            STATE.emergencyContact = contact; 
+            localStorage.setItem('mx_emergency_contact', contact);
+            
+            if (!navigator.geolocation) { 
+                showToast('Geolocalización no disponible', 'error'); 
+                return; 
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const mapsLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+                    const message = `🆘 *ALERTA DE EMERGENCIA - MotoXpress*\n\n📍 *Ubicación actual:*\n${mapsLink}\n\n⏰ *Hora:* ${new Date().toLocaleString()}\n\n*Este es un mensaje automático de emergencia.*`;
+                    
+                    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
+                    
+                    window.open(`https://wa.me/54${contact}?text=${encodeURIComponent(message)}`, '_blank');
+                    closeModal('emergency-modal'); 
+                    showToast('🚨 Alerta enviada', 'success');
+                },
+                (error) => { 
+                    showToast('No se pudo obtener ubicación', 'error'); 
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function callEmergency() { 
+            window.location.href = 'tel:911'; 
+        }
+
+        // ==========================================
+        // SISTEMA DE CALIFICACIÓN
+        // ==========================================
+        
+        function openRatingModal() { 
+            document.getElementById('rating-modal').classList.add('active'); 
+            renderStars(0); 
+        }
+        
+        function setRating(rating) { 
+            STATE.trip.rating = rating; 
+            renderStars(rating); 
+        }
+        
+        function renderStars(rating) {
+            document.querySelectorAll('#rating-stars .star').forEach((star, index) => {
+                if (index < rating) star.classList.add('active'); 
+                else star.classList.remove('active');
+            });
+        }
+
+        function submitRating() {
+            const comment = document.getElementById('rating-comment').value.trim();
+            
+            if (STATE.trip.rating === 0) { 
+                showToast('Selecciona una calificación', 'error'); 
+                return; 
+            }
+            
+            const ratingData = { 
+                rating: STATE.trip.rating, 
+                comment: comment, 
+                date: new Date().toISOString(), 
+                trip: { 
+                    origin: document.getElementById('origin-input').value, 
+                    dest: document.getElementById('dest-input').value, 
+                    distance: document.getElementById('distance-badge').textContent 
+                } 
+            };
+            
+            STATE.ratings.unshift(ratingData); 
+            localStorage.setItem('mx_ratings', JSON.stringify(STATE.ratings));
+            
+            closeModal('rating-modal'); 
+            showToast(`⭐ Gracias por calificar con ${STATE.trip.rating} estrellas`, 'success');
+            
+            STATE.trip.rating = 0; 
+            document.getElementById('rating-comment').value = '';
+        }
+
+        // ==========================================
+        // SISTEMA DE TICKET DIGITAL
+        // ==========================================
+        
+        function generateTicket() {
+            if (!STATE.trip.active) { 
+                showToast('No hay viaje activo', 'error'); 
+                return; 
+            }
+            
+            const now = new Date();
+            document.getElementById('ticket-date').textContent = now.toLocaleString();
+            document.getElementById('ticket-origin').textContent = document.getElementById('origin-input').value;
+            document.getElementById('ticket-dest').textContent = document.getElementById('dest-input').value;
+            document.getElementById('ticket-distance').textContent = document.getElementById('distance-badge').textContent.split('•')[0].trim();
+            document.getElementById('ticket-time').textContent = document.getElementById('distance-badge').textContent.split('•')[1]?.trim() || 'N/A';
+            document.getElementById('ticket-price').textContent = document.getElementById('total-price').textContent;
+            
+            const qrData = JSON.stringify({ 
+                id: 'MX' + now.getTime().toString().slice(-8), 
+                type: 'motoxpress_ticket', 
+                date: now.toISOString(), 
+                origin: document.getElementById('origin-input').value, 
+                dest: document.getElementById('dest-input').value, 
+                price: document.getElementById('total-price').textContent 
+            });
+            
+            const qrContainer = document.getElementById('ticket-qr');
+            qrContainer.innerHTML = '';
+            
+            try { 
+                new QRCode(qrContainer, { 
+                    text: qrData, 
+                    width: 120, 
+                    height: 120, 
+                    colorDark: '#0a1628', 
+                    colorLight: '#ffffff', 
+                    correctLevel: QRCode.CorrectLevel.H 
+                }); 
+            } catch (e) { 
+                qrContainer.innerHTML = '<div style="font-size: 10px; color: #666;">QR no disponible</div>'; 
+            }
+            
+            document.getElementById('ticket-modal').classList.add('active');
+        }
+
+        function downloadTicket() {
+            const ticketElement = document.getElementById('ticket-content');
+            
+            if (typeof html2canvas === 'undefined') { 
+                showToast('Librería no cargada. Intenta de nuevo.', 'error'); 
+                return; 
+            }
+            
+            html2canvas(ticketElement).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `MotoXpress-Ticket-${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                showToast('🎫 Ticket descargado', 'success');
+            }).catch(err => { 
+                console.error('Error:', err); 
+                showToast('Error al generar imagen', 'error'); 
+            });
+        }
+
+        // ==========================================
+        // PANEL DEL CONDUCTOR - EXPLICACIÓN DE BOTONES
+        // ==========================================
+        
+        /*
+        PANEL DEL CONDUCTOR - GUÍA DE BOTONES:
+        
+        HEADER DEL PANEL:
+        ┌─────────────────────────────────────┐
+        │  👨‍✈️  Conductor MotoXpress          │
+        │  ● En línea/Desconectado            │
+        │                                     │
+        │  [Viajes] [Ganancias] [Rating]      │
+        │     0        $0       5.0           │
+        └─────────────────────────────────────┘
+        
+        BOTONES DE ACCIÓN EN VIAJE:
+        
+        1. 📍 "He Llegado al Origen" (btn-arrived)
+           → Amarillo/naranja
+           → Presionar cuando el conductor llega al punto de recogida
+           → Notifica al cliente que ya está en el origen
+        
+        2. ▶️ "Iniciar Viaje" (btn-start)
+           → Verde
+           → Presionar cuando el cliente sube a la moto
+           → Comienza el conteo del viaje
+        
+        3. ✓ "Finalizar Viaje" (btn-complete)
+           → Azul/naranja degradado
+           → Presionar al dejar al cliente en el destino
+           → Completa el viaje y libera al conductor para nuevas solicitudes
+        
+        4. ✕ "Cancelar" (btn-cancel)
+           → Rojo/contorno
+           → Para cancelar el viaje actual (emergencias, imprevistos)
+           → Pide confirmación antes de cancelar
+        
+        BARRA DE NAVEGACIÓN INFERIOR:
+        
+        ┌──────────┬──────────┬──────────┬──────────┐
+        │    📋    │    💰    │   🟢/🔴  │    🚪    │
+        │Solicitudes│Ganancias │  Activo  │   Salir  │
+        └──────────┴──────────┴──────────┴──────────┘
+        
+        1. 📋 "Solicitudes" (Tab principal)
+           → Muestra las solicitudes de viaje entrantes
+           → Aquí aparecen los nuevos clientes solicitando servicio
+           → Botones "Aceptar" (verde) o "Rechazar" (gris)
+        
+        2. 💰 "Ganancias" 
+           → Muestra resumen de ganancias del día
+           → Estadísticas de viajes completados
+           → Histórico de ingresos
+        
+        3. 🟢/🔴 "Activo/Inactivo" (Toggle de estado)
+           → 🟢 Verde = Conductor disponible para recibir solicitudes
+           → 🔴 Rojo = Conductor ocupado o no disponible
+           → Cambia el estado online/offline del conductor
+           → Cuando está 🔴, no llegan nuevas solicitudes
+        
+        4. 🚪 "Salir"
+           → Cierra la sesión del conductor
+           → Vuelve a la pantalla de login
+           → Guarda las estadísticas antes de salir
+        */
+        
+        function openDriverLogin() {
+            document.getElementById('login-overlay').classList.add('active');
+        }
+
+        function closeDriverLogin() {
+            document.getElementById('login-overlay').classList.remove('active');
+            document.getElementById('login-error').classList.remove('active');
+            document.getElementById('login-phone').value = '';
+            document.getElementById('login-password').value = '';
+        }
+
+        function validateDriverLogin() {
+            const phone = document.getElementById('login-phone').value.trim();
+            const password = document.getElementById('login-password').value;
+            
+            if (password === CONFIG.driverPassword && phone.length >= 10) {
+                STATE.driver.loggedIn = true;
+                STATE.driver.online = true;
+                closeDriverLogin();
+                openDriverPanel();
+                showToast('✅ Bienvenido, Conductor', 'success');
+                simulateDriverRequests();
+            } else {
+                document.getElementById('login-error').classList.add('active');
+                setTimeout(() => {
+                    document.getElementById('login-error').classList.remove('active');
+                }, 3000);
+            }
+        }
+
+        function openDriverPanel() {
+            document.getElementById('driver-panel').classList.add('active');
+            updateDriverStats();
+        }
+
+        function logoutDriver() {
+            STATE.driver.loggedIn = false;
+            STATE.driver.online = false;
+            document.getElementById('driver-panel').classList.remove('active');
+            showToast('Sesión cerrada');
+        }
+
+        function toggleDriverStatus() {
+            STATE.driver.online = !STATE.driver.online;
+            
+            const statusEl = document.getElementById('driver-status');
+            const iconEl = document.getElementById('status-icon');
+            const textEl = document.getElementById('status-text');
+            
+            if (STATE.driver.online) {
+                statusEl.textContent = '● En línea';
+                statusEl.classList.add('online');
+                iconEl.textContent = '🟢';
+                textEl.textContent = 'Activo';
+                showToast('🟢 Estás en línea - Recibiendo solicitudes', 'success');
+            } else {
+                statusEl.textContent = '● Desconectado';
+                statusEl.classList.remove('online');
+                iconEl.textContent = '🔴';
+                textEl.textContent = 'Inactivo';
+                showToast('🔴 Desconectado - No recibirás solicitudes');
+            }
+        }
+
+        function updateDriverStats() {
+            document.getElementById('stat-trips').textContent = STATE.driver.stats.trips;
+            document.getElementById('stat-earnings').textContent = `$${STATE.driver.stats.earnings}`;
+            document.getElementById('stat-rating').textContent = STATE.driver.stats.rating.toFixed(1);
+        }
+
+        function simulateDriverRequests() {
+            if (!STATE.driver.online) return;
+            
+            setTimeout(() => {
+                if (STATE.driver.online && !STATE.driver.currentTrip) {
+                    showDriverRequest();
+                }
+            }, 3000);
+        }
+
+        function showDriverRequest() {
+            const requestsContainer = document.getElementById('driver-requests');
+            const price = (Math.random() * 2000 + 1000).toFixed(0);
+            
+            requestsContainer.innerHTML = `
+                <div class="request-card">
+                    <div class="request-header">
+                        <div class="request-route">Centro → Barrio Norte<br><small>1 parada</small></div>
+                        <div class="request-price">$${price}</div>
+                    </div>
+                    <div class="request-details">
+                        <div class="request-detail">📍 2.5 km</div>
+                        <div class="request-detail">⏱️ 8 min</div>
+                        <div class="request-detail">💵 Efectivo</div>
+                    </div>
+                    <div class="request-actions">
+                        <button class="btn-accept" onclick="acceptTrip('${price}')">✅ Aceptar</button>
+                        <button class="btn-decline" onclick="declineTrip()">❌ Rechazar</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function acceptTrip(price) {
+            STATE.driver.currentTrip = { price: parseInt(price), startTime: new Date() };
+            STATE.driver.stats.trips++;
+            STATE.driver.stats.earnings += parseInt(price);
+            updateDriverStats();
+            
+            document.getElementById('driver-requests').innerHTML = `
+                <div class="empty-state" style="padding: 20px;">
+                    <div class="empty-icon" style="font-size: 32px;">✅</div>
+                    <div class="empty-desc">Viaje aceptado. Dirígete al origen.</div>
+                </div>
+            `;
+            
+            document.getElementById('active-trip-section').style.display = 'block';
+            document.getElementById('btn-arrived').style.display = 'flex';
+            document.getElementById('btn-start').style.display = 'none';
+            document.getElementById('btn-complete').style.display = 'none';
+            
+            if (STATE.trip.active) {
+                STATE.trip.driverAssigned = true;
+                document.getElementById('chat-fab').classList.add('active');
+                document.getElementById('tracking-info').classList.add('active');
+                addChatMessage('system', '👨‍✈️ Tu conductor ha sido asignado y está en camino.');
+            }
+            
+            showToast('✅ Viaje aceptado', 'success');
+        }
+
+        function declineTrip() {
+            document.getElementById('driver-requests').innerHTML = `
+                <div class="empty-state" style="padding: 20px;">
+                    <div class="empty-icon" style="font-size: 32px;">📱</div>
+                    <div class="empty-desc">Buscando nuevas solicitudes...</div>
+                </div>
+            `;
+            setTimeout(() => simulateDriverRequests(), 5000);
+        }
+
+        function driverArrived() {
+    document.getElementById('btn-arrived').style.display = 'none';
+    document.getElementById('btn-start').style.display = 'flex';
+    addChatMessage('driver', '📍 He llegado al punto de origen. ¿Estás listo?');
+    showToast('📍 Cliente notificado de tu llegada', 'success');
+}
+
+function startTrip() {
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-complete').style.display = 'flex';
+    STATE.trip.status = 'in_progress';
+    addChatMessage('driver', '🏍️ Viaje iniciado. ¡Vamos! 💨');
+    showToast('🏍️ Viaje iniciado', 'success');
+}
+
+function completeTrip() {
+    document.getElementById('active-trip-section').style.display = 'none';
+    document.getElementById('driver-requests').innerHTML = `
+        <div class="empty-state" style="padding: 20px;">
+            <div class="empty-icon" style="font-size: 32px;">✅</div>
+            <div class="empty-desc">Viaje completado. ¡Buen trabajo!</div>
+        </div>
+    `;
+    
+    STATE.driver.currentTrip = null;
+    STATE.trip.status = 'completed';
+    addChatMessage('driver', '✅ Viaje completado. ¡Gracias por elegir MotoXpress!');
+    
+    document.getElementById('chat-fab').classList.remove('active');
+    document.getElementById('tracking-info').classList.remove('active');
+    
+    showToast('✅ Viaje completado', 'success');
+    setTimeout(() => simulateDriverRequests(), 3000);
+}
+
+function cancelTrip() {
+    if (confirm('¿Cancelar el viaje actual?')) {
+        document.getElementById('active-trip-section').style.display = 'none';
+        document.getElementById('driver-requests').innerHTML = `
+            <div class="empty-state" style="padding: 20px;">
+                <div class="empty-icon" style="font-size: 32px;">📱</div>
+                <div class="empty-desc">Viaje cancelado. Esperando nuevas solicitudes...</div>
+            </div>
+        `;
+        STATE.driver.currentTrip = null;
+        addChatMessage('driver', '❌ El conductor ha cancelado el viaje.');
+        setTimeout(() => simulateDriverRequests(), 3000);
+    }
+}
+
+function switchDriverTab(tab) {
+    if (tab === 'earnings') {
+        showToast(`💰 Ganancias hoy: $${STATE.driver.stats.earnings} | Viajes: ${STATE.driver.stats.trips}`, 'success');
+    } else if (tab === 'requests') {
+        // Ya está en solicitudes por defecto
+        showToast('📋 Mostrando solicitudes de viaje');
+    }
+}
+
+// ==========================================
+// SISTEMA DE CHAT
+// ==========================================
+
+function toggleChat() {
+    const chat = document.getElementById('chat-overlay');
+    chat.classList.toggle('active');
+    
+    if (chat.classList.contains('active')) {
+        STATE.chat.unread = 0;
+        document.getElementById('chat-fab').classList.remove('has-new');
+        scrollToBottom();
+    }
+}
+
+function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    addChatMessage('client', text);
+    input.value = '';
+    
+    // Simular respuesta del conductor
+    setTimeout(() => {
+        const responses = [
+            '¡Perfecto! Voy en camino 🏍️',
+            'Llego en 3 minutos approximately',
+            'Estoy cerca del punto de encuentro',
+            '¿Puedes confirmar la dirección?',
+            'Voy con el casco de repuesto por si lo necesitas 🪖',
+            '¡Ya te veo! 👋',
+            '¿Estás en la dirección indicada?'
+        ];
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        addChatMessage('driver', randomResponse);
+        
+        if (!document.getElementById('chat-overlay').classList.contains('active')) {
+            document.getElementById('chat-fab').classList.add('has-new');
+            STATE.chat.unread++;
+        }
+    }, 1500);
+}
+
+function sendDriverMessage() {
+    const input = document.getElementById('driver-chat-input');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    addChatMessage('driver', text, true);
+    input.value = '';
+    
+    // Simular respuesta del cliente
+    setTimeout(() => {
+        const responses = [
+            '¡Gracias! Te espero en la esquina',
+            'Perfecto, voy saliendo',
+            'Estoy en la puerta principal',
+            '¿Llevas cambio de $1000?',
+            '¡Listo! 🙌',
+            'Sí, confirmo la dirección',
+            'Voy con una mochila negra'
+        ];
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        addChatMessage('client', randomResponse, true);
+    }, 2000);
+}
+
+function addChatMessage(sender, text, isDriverPanel = false) {
+    const container = isDriverPanel ? 
+        document.getElementById('driver-chat-messages') : 
+        document.getElementById('chat-messages');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${sender === 'client' || sender === 'driver' ? 'sent' : 'received'}`;
+    
+    if (sender === 'driver') messageDiv.classList.add('received');
+    else if (sender === 'client') messageDiv.classList.add('sent');
+    
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    messageDiv.innerHTML = `${text}<div class="chat-time">${time}</div>`;
+    
+    const emptyState = container.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+    
+    container.appendChild(messageDiv);
+    scrollToBottom(isDriverPanel);
+}
+
+function scrollToBottom(isDriverPanel = false) {
+    const container = isDriverPanel ? 
+        document.getElementById('driver-chat-messages') : 
+        document.getElementById('chat-messages');
+    container.scrollTop = container.scrollHeight;
+}
+
+// ==========================================
+// SEGUIMIENTO EN TIEMPO REAL
+// ==========================================
+
+function simulateDriverMovement() {
+    if (!STATE.trip.active || !STATE.trip.driverAssigned || STATE.trip.status !== 'pending') return;
+    
+    if (STATE.markers.origin && !STATE.markers.driver) {
+        // Crear marcador del conductor por primera vez
+        const origin = STATE.markers.origin.getLatLng();
+        const offsetLat = (Math.random() - 0.5) * 0.01;
+        const offsetLng = (Math.random() - 0.5) * 0.01;
+        const driverLatLng = L.latLng(origin.lat + offsetLat, origin.lng + offsetLng);
+        
+        const icon = L.divIcon({ 
+            className: 'custom-marker marker-driver', 
+            html: '🏍️', 
+            iconSize: [44, 44], 
+            iconAnchor: [22, 22] 
+        });
+        
+        STATE.markers.driver = L.marker(driverLatLng, {icon}).addTo(STATE.map);
+    } else if (STATE.markers.driver) {
+        // Mover conductor hacia el origen
+        const current = STATE.markers.driver.getLatLng();
+        const origin = STATE.markers.origin.getLatLng();
+        
+        const newLat = current.lat + (origin.lat - current.lat) * 0.1;
+        const newLng = current.lng + (origin.lng - current.lng) * 0.1;
+        STATE.markers.driver.setLatLng([newLat, newLng]);
+        
+        const distance = calculateDistance(STATE.markers.driver.getLatLng(), origin);
+        const time = Math.ceil(distance / 0.5 * 2);
+        
+        document.getElementById('tracking-distance').textContent = distance.toFixed(1);
+        document.getElementById('tracking-time').textContent = time;
+        document.getElementById('tracking-status').textContent = time <= 1 ? '¡Llegando ahora!' : `Llega en ${time} minutos`;
+    }
+}
+
+// ==========================================
+// HISTORIAL Y UTILIDADES
+// ==========================================
+
+function saveToHistory(points, distance, price) {
+    const origin = points[0];
+    const dest = points[points.length - 1];
+    
+    const isDuplicate = STATE.tripHistory.some(item => 
+        Math.abs(item.originCoords.lat - origin.lat) < 0.001 && 
+        Math.abs(item.destCoords.lat - dest.lat) < 0.001
+    );
+    
+    if (isDuplicate) return;
+    
+    const historyItem = { 
+        origin: document.getElementById('origin-input').value, 
+        dest: document.getElementById('dest-input').value, 
+        originCoords: { lat: origin.lat, lng: origin.lng }, 
+        destCoords: { lat: dest.lat, lng: dest.lng }, 
+        stops: STATE.stops.map(s => s ? { lat: s.lat, lng: s.lng } : null).filter(Boolean), 
+        distance: distance.toFixed(1), 
+        price: typeof price === 'number' ? price.toFixed(2) : price, 
+        date: new Date().toISOString() 
+    };
+    
+    STATE.tripHistory.unshift(historyItem);
+    if (STATE.tripHistory.length > 10) STATE.tripHistory.pop();
+    
+    localStorage.setItem('mx_history', JSON.stringify(STATE.tripHistory));
+    loadHistory();
+}
+
+function loadHistory() {
+    const list = document.getElementById('history-list');
+    
+    if (STATE.tripHistory.length === 0) { 
+        document.getElementById('history-section').style.display = 'none'; 
+        return; 
+    }
+    
+    list.innerHTML = STATE.tripHistory.map((item, index) => `
+        <div class="history-item" onclick="loadHistoryTrip(${index})">
+            <div class="history-icon">🕐</div>
+            <div class="history-details">
+                <div class="history-route">${item.origin.split(',')[0]} → ${item.dest.split(',')[0]}</div>
+                <div class="history-meta">
+                    <span>${item.distance} km</span>
+                    <span class="history-price">$${item.price}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    document.getElementById('history-section').style.display = 'block';
+}
+
+function loadHistoryTrip(index) {
+    const item = STATE.tripHistory[index]; 
+    if (!item) return;
+    
+    clearRoute();
+    
+    const origin = L.latLng(item.originCoords.lat, item.originCoords.lng);
+    const dest = L.latLng(item.destCoords.lat, item.destCoords.lng);
+    
+    setOrigin(origin);
+    
+    if (item.stops && item.stops.length > 0) {
+        item.stops.forEach((stop, i) => { 
+            if (stop) addStopMarker(L.latLng(stop.lat, stop.lng), i); 
+        });
+    }
+    
+    setDestination(dest); 
+    calculateRoute(); 
+    showToast('📍 Viaje cargado del historial', 'success');
+}
+
+function clearHistory() {
+    if (confirm('¿Borrar todo el historial?')) {
+        STATE.tripHistory = []; 
+        localStorage.removeItem('mx_history'); 
+        loadHistory(); 
+        showToast('Historial borrado', 'success');
+    }
+}
+
+function clearRoute() {
+    // Remover marcadores
+    if (STATE.markers.origin) { 
+        STATE.map.removeLayer(STATE.markers.origin); 
+        STATE.markers.origin = null; 
+    }
+    if (STATE.markers.dest) { 
+        STATE.map.removeLayer(STATE.markers.dest); 
+        STATE.markers.dest = null; 
+    }
+    if (STATE.markers.user) { 
+        STATE.map.removeLayer(STATE.markers.user); 
+        STATE.markers.user = null; 
+    }
+    if (STATE.markers.driver) {
+        STATE.map.removeLayer(STATE.markers.driver);
+        STATE.markers.driver = null;
+    }
+    
+    // Remover paradas
+    STATE.markers.stops.forEach(m => { 
+        if (m) STATE.map.removeLayer(m); 
+    });
+    STATE.markers.stops = []; 
+    STATE.stops = [];
+    
+    // Remover línea de ruta
+    if (STATE.routeLine) { 
+        STATE.map.removeLayer(STATE.routeLine); 
+        STATE.routeLine = null; 
+    }
+    
+    // Resetear estado
+    STATE.trip.active = false; 
+    STATE.trip.startTime = null; 
+    STATE.trip.driverAssigned = false;
+    STATE.trip.status = 'pending';
+    STATE.reservation.active = false;
+    STATE.reservation.date = null; 
+    STATE.reservation.time = null; 
+    STATE.selectionMode = 'origin'; 
+    STATE.currentStopIndex = -1;
+    
+    // Limpiar inputs
+    document.getElementById('origin-input').value = ''; 
+    document.getElementById('dest-input').value = '';
+    document.getElementById('stops-container').innerHTML = ''; 
+    
+    // Ocultar paneles
+    document.getElementById('price-card').classList.remove('active');
+    document.getElementById('empty-state').style.display = 'block'; 
+    document.getElementById('emergency-fab').classList.remove('active');
+    document.getElementById('chat-fab').classList.remove('active');
+    document.getElementById('chat-fab').classList.remove('has-new');
+    document.getElementById('tracking-info').classList.remove('active');
+    document.getElementById('reservation-section').style.display = 'none'; 
+    document.getElementById('feature-reservation').classList.remove('active');
+    document.getElementById('reservation-toggle').classList.remove('active'); 
+    document.getElementById('reservation-details').classList.remove('active');
+    document.getElementById('night-badge').style.display = 'none';
+    
+    updateStopsButton(); 
+    STATE.map.setView(CONFIG.pericoCenter, 14);
+    
+    showToast('🔄 Listo para nuevo viaje', 'success');
+}
+
+function closeModal(modalId) { 
+    document.getElementById(modalId).classList.remove('active'); 
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message; 
+    toast.className = `toast show ${type}`;
+    
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ==========================================
+// EVENTOS Y UTILIDADES ADICIONALES
+// ==========================================
+
+// Cerrar modales al hacer click fuera
+setTimeout(() => {
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => { 
+            if (e.target === overlay) overlay.classList.remove('active'); 
+        });
+    });
+    
+    document.getElementById('chat-overlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('chat-overlay')) {
+            toggleChat();
+        }
+    });
+}, 100);
+
+// Inicializar aplicación
+window.onload = init;
+
+// Recuperar sesión guardada
+window.addEventListener('load', () => {
+    const savedShare = localStorage.getItem('mx_active_share');
+    if (savedShare) {
+        const data = JSON.parse(savedShare);
+        if (data.expiry > Date.now()) { 
+            STATE.trip.shareToken = data.token; 
+            STATE.trip.shareExpiry = data.expiry; 
+        } else {
+            localStorage.removeItem('mx_active_share');
+        }
+    }
+    
+    const savedDriver = localStorage.getItem('mx_driver_session');
+    if (savedDriver) {
+        const session = JSON.parse(savedDriver);
+        if (session.expiry > Date.now()) {
+            STATE.driver.loggedIn = true;
+            STATE.driver.online = true;
+            STATE.driver.stats = session.stats;
+            openDriverPanel();
+        } else {
+            localStorage.removeItem('mx_driver_session');
+        }
+    }
+});
+
+// Guardar sesión antes de cerrar
+window.addEventListener('beforeunload', () => {
+    if (STATE.driver.loggedIn) {
+        const session = {
+            expiry: Date.now() + 24 * 60 * 60 * 1000,
+            stats: STATE.driver.stats
+        };
+        localStorage.setItem('mx_driver_session', JSON.stringify(session));
+    }
+});
+
+// Manejar cambio de tamaño de ventana
+window.addEventListener('resize', () => {
+    if (STATE.map) {
+        setTimeout(() => {
+            STATE.map.invalidateSize();
+        }, 100);
+    }
+});
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</body>
+</html>
